@@ -47,27 +47,46 @@ def find_in_parent(path, name):
         abspath = os.path.dirname(last)
     return None
 
-def find_demosthenes_project(path=None):
+def find_demosthenes_project(path=None, required=None):
     if path is None:
         path = os.getcwd()
     demos_config = find_in_parent(path, DEMOSTHENES_CONFIG)
-    return os.path.dirname(demos_config) if demos_config else None
+    proot = os.path.dirname(demos_config) if demos_config else None
+    if required is None:
+        return proot
+    if required and not proot:
+        raise RuntimeError, "unable to find project directory"
+    return proot
 
-def find_playbook_path(config, project_root):
+def find_playbook_path(config, project_root, required=None):
     places = list()
     if project_root:
         places = [os.path.join(project_root, 'demos-playbooks', 'playbooks')]
-    places.extend(config['paths']['playbook-paths'])
+    places.extend(config['paths']['playbooks-paths'])
+    found_path = None
     for playbook_path in places:
         if os.path.isfile(os.path.join(playbook_path, 'site.yml')):
-            return playbook_path
+            found_path = playbook_path
+            break
+    if required is None:
+        return found_path
+    if required and found_path is None:
+        raise RuntimeError, "unable to find playbook path"
+    return found_path
 
-def find_inventory_path(project_root):
+def find_inventory_path(project_root, required=None):
+    found_path = None
     for inventory_path in ANSIBLE_INVENTORY_PATHS:
         adirectory = os.path.join(project_root, inventory_path)
         if os.path.isdir(adirectory):
-            return adirectory
-        
+            found_path = adirectory
+            break
+    if required is None:
+        return found_path
+    if required and found_path is None:
+        raise RuntimeError, "unable to find inventory for ansible"
+    return found_path
+
 
 def get_config_filenames():
     set_xdg_defaults()
@@ -91,7 +110,7 @@ def read_config(project_root):
     cfgparser.readfp(StringIO(CONFIG_DEFAULTS))
     cfgparser.read(configfiles)
     cfg = dict((section, dict(cfgparser.items(section)))
-                for secion in cfgparser.sections())
+                for section in cfgparser.sections())
     for option in ['data-home', 'install-path']:
         cfg['paths'][option] = expand_user_and_vars(cfg['paths'][option])
     cfg['paths']['playbooks-paths'] = [

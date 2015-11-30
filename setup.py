@@ -24,5 +24,7 @@ orator for ansible""",
       ],
       entry_points="""
       # -*- Entry points: -*-
+      [console_scripts]
+      demos-init = demosthenes.scripts.demos_init:main
       """,
       )

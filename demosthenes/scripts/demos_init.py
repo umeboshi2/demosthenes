@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import os
+import argparse
 import subprocess
 
-from demosthenes import INVENTORY
+from demosthenes import INVENTORY, DEMOSTHENES_CONFIG
 
 SKEL_PATHS = [
     os.path.join('ansible', INVENTORY, 'group_vars', 'all'),
@@ -61,8 +62,28 @@ def write_config_files(project_root):
     write_file(config_name, DEFAULT_CONFIG)
     ignore_name = os.path.join(project_root, '.gitignore')
     write_file(ignore_name, DEFAULT_GITIGNORE)
+    hosts_name = os.path.join(project_root, 'ansible', INVENTORY, 'hosts')
+    content = HOSTS_FILE_HEADER + HOSTS_FILE_CONTENT
+    write_file(hosts_name, content)
+    
     
 
-def main(project_root):
-    print "Hello world"
+def main():
+    orig_project_root = args.project_dir
+    project_root = os.path.abspath(args.project_dir)
+    config_path = os.path.join(project_root, DEMOSTHENES_CONFIG)
+    if os.path.exists(config_path):
+        raise RuntimeError, "%s exists." % config_path
+
+    for skel_path in SKEL_PATHS:
+        abspath = os.path.join(project_root, skel_path)
+        if not os.path.isdir(abspath):
+            os.makedirs(abspath)
+
+    write_config_files(project_root)
+    return 0
+
     
+parser = argparse.ArgumentParser()
+parser.add_argument('project_dir', default=os.curdir)
+args = parser.parse_args()

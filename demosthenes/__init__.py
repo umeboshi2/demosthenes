@@ -21,7 +21,7 @@ data-home: $XDG_DATA_HOME/demosthenes
 install-path: %(data-home)s/demos-playbooks
 
 # Locations where Demosthenes playbooks may be found
-playbooks-paths: $(install-path)s/playbooks
+playbooks-paths: %(install-path)s/playbooks
 
 [ansible defaults]
 ansible_managed = This file managed by ansible.  Do no edit!

@@ -27,5 +27,6 @@ orator for ansible""",
       [console_scripts]
       demos-init = demosthenes.scripts.demos_init:main
       demos = demosthenes.scripts.demos:main
+      demos-update = demosthenes.scripts.demos_update:main
       """,
       )

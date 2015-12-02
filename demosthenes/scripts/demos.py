@@ -2,12 +2,15 @@
 import os, sys
 import argparse
 from ConfigParser import ConfigParser
+import subprocess
 
 import ansible
 
-from demosthenes import INVENTORY, DEMOSTHENES_CONFIG
+from demosthenes import INVENTORY, DEMOSTHENES_CONFIG, ANSIBLE_CONFIG_FILE
+from demosthenes import INSECURE
 from demosthenes import find_demosthenes_project, read_config
-from demosthenes import find_playbook_path
+from demosthenes import find_playbook_path, find_inventory_path
+
 
 pjoin = os.path.join
 
@@ -26,7 +29,7 @@ def write_config(filename, data):
     cparser = ConfigParser()
     for section, options in data.items():
         cparser.add_section(section)
-        for opt, val in options:
+        for opt, val in options.items():
             cparser.set(section, opt, val)
     with file(filename, 'w') as outfile:
         outfile.write(CONFIG_FILE_HEADER)
@@ -80,21 +83,69 @@ def generate_ansible_config(filename, config, project_root,
             custom_ansible_paths(plugin_section))
 
     defaults['library'] = PATHSEP.join(custom_ansible_paths('library'))
-    
+    print "WRITE_CONFIG", filename
     write_config(filename, cfg)
     
 
 def main():
     args = sys.argv[1:]
-    print "hello world", args
+    #print "hello world", args
     project_root = find_demosthenes_project(required=True)
-    print "project_root", project_root
+    #print "project_root", project_root
     config = read_config(project_root)
-    print "Config", config
+    #print "Config", config
     playbooks_path = find_playbook_path(config, project_root, required=True)
-    print "Playbooks_Path", playbooks_path
-    
+    #print "Playbooks_Path", playbooks_path
 
+    # FIXME make sure ansible-playbook exists?
+
+    inventory_path = find_inventory_path(project_root)
+    print "INVENTORY_PATH", inventory_path
+    os.environ['ANSIBLE_HOSTS'] = inventory_path
+
+    ansible_config_file = pjoin(project_root, ANSIBLE_CONFIG_FILE)
+    os.environ['ANSIBLE_CONFIG'] = os.path.abspath(ansible_config_file)
+
+    # actually create the ansible_config_file
+    generate_ansible_config(ansible_config_file, config,
+                            project_root, playbooks_path, inventory_path)
+    
+    
+    # make local find_playbook function
+    def find_playbook(playbook):
+        path_choices = [
+            (project_root, 'playbooks', playbook),
+            (project_root, 'ansible', 'playbooks', playbook),
+            (playbooks_path, playbook),]
+        for fragments in path_choices:
+            filename = pjoin(*fragments)
+            if os.path.isfile(filename):
+                return filename
+            
+    
+    # see if a playbook was specified as the
+    # first argument.
+    play = None
+    if len(args) > 0:
+        maybe_play = args[0]
+        if os.path.isfile(maybe_play):
+            play = maybe_play
+        else:
+            play = find_playbook('%s.yml' % maybe_play)
+        if play is not None:
+            args.pop(0)
+    if play is None:
+        play = find_playbook('site.yml')
+
+    print "Running ansible plabybook from", play, '...'
+    
+    try:
+        retcode = subprocess.call(['ansible-playbook', play] + args)
+        sys.exit(retcode)
+    except KeyboardInterrupt:
+        raise KeyboardInterrupt
+    
+    
 #parser = argparse.ArgumentParser()
 #parser.add_argument('project_dir', default=os.curdir)
 #args = parser.parse_args()

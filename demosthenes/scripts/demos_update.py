@@ -105,6 +105,9 @@ def setup_roles(roles_path, requirements_file):
     print "ISFILE", os.path.isfile(requirements_file)
     cmd = ['ansible-galaxy', 'install', '-r', requirements_file,
            '-p', roles_path]
+    # FIXME ansible-galaxy needs to be smarter
+    if True:
+        cmd += ['--force']
     print "CMD", ' '.join(cmd)
     subprocess.check_call(cmd)
     

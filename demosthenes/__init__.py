@@ -2,6 +2,12 @@ import os
 from ConfigParser import SafeConfigParser
 from cStringIO import StringIO
 
+
+INSECURE = bool(os.environ.get('INSECURE', False))
+if INSECURE:
+    import warnings
+    warnings.warn("**INSECURE ENVIRONMENT**")
+    
 INVENTORY = 'inventory'
 ANSIBLE_CONFIG_FILE = "ansible.cfg"
 DEMOSTHENES_CONFIG = '.demosthenes.cfg'

@@ -22,6 +22,7 @@ GALAXY_ACCOUNT_DEMOS = 'umeboshi2'
 
 SITE_PLAYBOOK = pjoin('playbooks', 'site.yml')
 
+STD_PLAYBOOKS_URI = 'https://github.com/debops/debops-playbooks.git'
 
 def clone_repo(uri, branch, dest):
     subprocess.check_call(['git', 'clone', '--quiet', '--branch',
@@ -63,23 +64,32 @@ def fetch_or_clone_role(roles_path, role_name, count):
     
     
 
-def setup_project(project_dir):
+def setup_project(project_dir, config):
     if project_dir is None:
         return None, None
     if not os.path.isdir(project_dir):
         print "Creating project directory in", project_dir
         os.makedirs(project_dir)
+    playbooks_dirname = config.get('repos', {}).get('playbooks_dirname',
+                                                    'debops-playbooks')
     # if project_dir is specified, install
     # the playbooks in that directory
-    install_path = pjoin(project_dir, 'demos-playbooks')
+    install_path = pjoin(project_dir, playbooks_dirname)
     install_playbooks = True
     if os.path.isfile(pjoin(install_path, SITE_PLAYBOOK)):
         install_playbooks = False
     return install_path, install_playbooks
 
             
-def setup_playbooks(install_path, playbooks_path, install_playbooks):
-    uri = pjoin(DEMOS_GIT_URI, 'debops-playbooks.git')
+def setup_playbooks(config, install_path,
+                    playbooks_path, install_playbooks):
+    playbooks_repo = config.get('repos', {}).get('playbooks_repo',
+                                                 STD_PLAYBOOKS_URI)
+    playbooks_dirname = config.get('repos', {}).get('playbooks_dirname',
+                                                    'debops-playbooks')
+    uri = playbooks_repo
+    print "playbooks_repo", playbooks_repo
+    print uri
     if not playbooks_path:
         print "Standard playbooks not there.  Installing to", install_path
         clone_repo(uri, 'master', install_path)
@@ -90,7 +100,7 @@ def setup_playbooks(install_path, playbooks_path, install_playbooks):
             clone_repo(uri, 'master', install_path)
         else:
             update_repo(install_path)
-    return pjoin(install_path, 'demos-playbooks')
+    return pjoin(install_path, playbooks_dirname)
 
         
 def setup_roles_orig(roles_path, requirements_file):
@@ -101,14 +111,12 @@ def setup_roles_orig(roles_path, requirements_file):
         fetch_or_clone_role(roles_path, role_name, count)
 
 def setup_roles(roles_path, requirements_file):
-    print "REQUIREMENTS_FILE", requirements_file
-    print "ISFILE", os.path.isfile(requirements_file)
     cmd = ['ansible-galaxy', 'install', '-r', requirements_file,
            '-p', roles_path]
     # FIXME ansible-galaxy needs to be smarter
     if True:
         cmd += ['--force']
-    print "CMD", ' '.join(cmd)
+    print "Installing roles with command: ", ' '.join(cmd)
     subprocess.check_call(cmd)
     
 
@@ -118,20 +126,26 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('project_dir', default=None, nargs='?')
     args = parser.parse_args()
-    install_path, install_playbooks = setup_project(args.project_dir)
+    print "PROJECT_DIR", args.project_dir
+    config = read_config(args.project_dir)
+    install_path, install_playbooks = setup_project(args.project_dir, config)
     print "install_path, install_playbooks", install_path, install_playbooks
     playbooks_path = install_playbooks or install_path
     print "playbooks_path", playbooks_path
+    project_root = find_demosthenes_project(path=args.project_dir,
+                                            required=False)
+    print "project_root", project_root
+    config = read_config(project_root)
+    
+                                                 
     if install_path is None:
-        project_root = find_demosthenes_project(required=False)
-        config = read_config(project_root)
         playbooks_path = find_playbook_path(config,
                                             project_root, required=False)
         if playbooks_path:
             install_path = os.path.dirname(playbooks_path)
         else:
             install_path = config['paths']['install-path']
-    setup_playbooks(install_path,
+    setup_playbooks(config, install_path,
                     playbooks_path, install_playbooks)
     roles_path = pjoin(install_path, 'roles')
     setup_roles(roles_path, pjoin(install_path, 'galaxy/requirements.yml'))

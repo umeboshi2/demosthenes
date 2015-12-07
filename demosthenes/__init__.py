@@ -24,7 +24,7 @@ CONFIG_DEFAULTS = """\
 data-home: $XDG_DATA_HOME/demosthenes
 
 # Default installation directory
-install-path: %(data-home)s/demos-playbooks
+install-path: %(data-home)s/debops-playbooks
 
 # Locations where Demosthenes playbooks may be found
 playbooks-paths: %(install-path)s/playbooks
@@ -66,8 +66,10 @@ def find_demosthenes_project(path=None, required=None):
 
 def find_playbook_path(config, project_root, required=None):
     places = list()
+    pb_dirname = config.get('repos', {}).get('playbooks_dirname',
+                                             'debops-playbooks')
     if project_root:
-        places = [os.path.join(project_root, 'demos-playbooks', 'playbooks')]
+        places = [os.path.join(project_root, pb_dirname, 'playbooks')]
     places.extend(config['paths']['playbooks-paths'])
     found_path = None
     for playbook_path in places:

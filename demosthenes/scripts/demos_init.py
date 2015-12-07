@@ -14,6 +14,11 @@ SKEL_PATHS = [
 
 DEFAULT_CONFIG = """\
 # -*- conf -*-
+# FIXME, need better section name
+[repos]
+;playbooks_repo:  https://github.com/debops/debops-playbooks.git
+;playbooks_dirname: debops-playbooks
+
 [paths]
 ;data-home: /var/lib/demosthenes
 
